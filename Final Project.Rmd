@@ -1,0 +1,229 @@
+---
+title: "Project Draft"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,
+                      warning = FALSE, error = TRUE,
+                      fig.height = 3)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r echo = FALSE}
+gdp <- read_csv("~/Documents/STAT240/data/flat-ui__data-Mon Nov 18 2024.csv")
+
+temperature <- read_csv("~/Documents/STAT240/data/Average surface temperature - all.csv")
+```
+*Group Members*
+Elliot Descarpentrie.
+
+# **Introduction**
+
+Understanding the relationship between economic performance and environmental factors is in the context of global development. In particular, examining whether a GDP is related to its average surface temperature provides information into how economic growth may interact with environmental conditions.
+
+We want to know if a country’s GDP from 2022 is correlated with its average surface temperature over the past 29 years. We want to find any patterns or trends that could show whether climatic factors have a measurable impact on economic output.
+
+**Thesis Statement**  
+
+There is a correlation between average surface temperature and GDP in 2022.
+
+# **Background**
+
+To explore the relationship between a country’s GDP in 2022 and its average surface temperature over the past 29 years. We analyzed two datasets: one containing GDP data and the other containing surface temperature data. These datasets provide the necessary information to test for a potential correlation between economic output and climatic conditions.
+
+
+**GDP Data**
+
+The GDP data was accessed through Datahub.io and originally sourced from the World Bank Group. This dataset compiles national accounts reported by individual countries, created using a combination of surveys, administrative data, and estimations by statistical offices within those countries. The primary purpose of this data is to track economic growth across nations.
+
+Key Variables:
+
+country code: 3 digit code to identify each individual country.
+
+Country Name: Identifies the specific country.
+
+Year: Indicates the year for which GDP is recorded.
+
+GDP Value: Represents the total GDP in USD for a specific country in a given year.
+
+Each row in the dataset represents a specific country in a given year. Since the data covers the entire population of reported GDP values, it is not considered a sample.
+
+**Temperature Data**
+
+The temperature data was sourced from the Climactic Research Unit and aggregated by the World Bank Group. The dataset provides the average surface temperature for countries worldwide by averaging daily minimum and maximum temperatures over the period from 1991 to 2020. This dataset was created to facilitate the understanding of climate trends and their potential impacts.
+
+Key Variables:
+
+country code: 3 digit code to identify each individual country.
+
+Country: Identifies the specific country.
+
+Surface Temperature: The average temperature (in degrees Celsius) over the past 29 years.
+
+Each row in the dataset represents a specific country over the 29-year period from 1991 to 2020. Similar to the GDP dataset, this data is not a sample but rather a complete aggregation of temperature data for all countries.
+
+**Combined data**
+
+With our two data sets, we can join them together using their country name identifier column, and filter out only the year that we want, to conduct the analysis.
+
+**Background information and unusual factors**
+
+An unusual factor that could impact our data might be Ukraine-Russia, that affected things like oil, food, and arms trading between countries. There was also a global surge in inflation which greatly hurt the USA economy as well as affecting other countries. These factors could cause there to be unusual outcomes in our data.
+
+**Scatter plot**
+
+```{r, echo=FALSE}
+
+
+colnames(temperature) <- c("Code", "Name", "Average_Temperature")
+colnames(gdp) <- c("Country_Name", "Country_Code", "Year", "GDP")
+
+gdp_2022 <- gdp %>%
+  filter(Year == 2022)
+
+merged_data <- temperature %>%
+  inner_join(gdp_2022, by = c("Code" = "Country_Code"))
+
+final_data <- merged_data %>%
+  select(Name, Code, Average_Temperature, Year, GDP)
+
+
+
+ggplot(final_data, aes(x = Average_Temperature, y = GDP)) +
+  geom_point(color = "blue") +              
+  geom_smooth(method = "lm", color = "red") + 
+  labs(
+    title = "GDP vs Average Temperature(Logarithmic scale)",
+    x = "Average Temperature (°C)",
+    y = "GDP (USD)"
+  ) +
+  scale_y_continuous(trans = "log10", labels = scales::label_number(scale = 1e-9, suffix = "B"))+
+  theme_minimal()
+
+ggplot(final_data, aes(x = Average_Temperature, y = GDP)) +
+  geom_point(color = "blue") +              
+  geom_smooth(method = "lm", color = "red") + 
+  labs(
+    title = "GDP vs Average Temperature",
+    x = "Average Temperature (°C)",
+    y = "GDP (USD)"
+  ) +
+  scale_y_continuous(
+    labels = scales::label_number(scale = 1e-9, suffix = "B")
+  )+
+  theme_minimal()
+
+
+cleaned_data <- final_data %>%
+  filter(GDP < 1e13)
+
+ggplot(cleaned_data, aes(x = Average_Temperature, y = GDP)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(
+    title = "GDP vs Average Temperature (Cleaned)",
+    x = "Average Temperature (°C)",
+    y = "GDP (USD)"
+  ) +
+  scale_y_continuous(
+    labels = scales::label_number(scale = 1e-9, suffix = "B")
+  )+
+  theme_minimal()
+
+```
+
+**Graph explanation**
+
+The cleaned graph removes the outliers, China and USA, to give a better look at what the rest of the data can show us. 
+
+This plot doesn't show a strong correlation between GDP and temperature, but we still need to do more analysis. 
+
+# **Statistical Analysis**
+
+**Parameters of Interest**
+
+GDP and Temperature
+
+**Statistical Model**
+
+The type of inference method is simple linear regression.
+
+**Hypothesis**
+
+$H_0: \beta_1 = 0$
+
+$H_a: \beta_1 \ne 0$
+
+
+**Check Assumptions**
+
+```{r, include=FALSE}
+Linear_data<- lm(GDP ~ Average_Temperature, data = final_data)
+Linear_data
+
+new_data = final_data %>%
+  mutate(residuals = resid(Linear_data))
+
+```
+```{r, echo= FALSE}
+
+ggplot( new_data,(aes(Average_Temperature,residuals)))+
+  geom_point()+ 
+  geom_hline(yintercept = 0, color = "red") + ylim(-5e+12, 5e+12)
+  
+```
+
+Linearity: Looks linear, no obvious curve or pattern.
+
+Normality: Normality is violated because the residuals are not symmetric around 0.
+
+Constant Variance: Constant variance is violated because the spread of the residuals decreases across X.
+
+# **Discussion**
+
+**P-Value**
+
+```{r, echo = FALSE}
+p_value <- summary(Linear_data)$coefficients[2, 4]
+
+Linear_data <- lm(GDP ~ Average_Temperature, data = final_data)
+
+pt_est <- summary(Linear_data)$coefficients[2, 1]
+sd = summary(Linear_data)$coefficients[2, 2]
+test_stat = (pt_est - 0) / sd
+
+n = nrow(final_data)
+
+p_value = 2 * pt(test_stat, df = n - 2)
+
+```
+Our pvalue is 0.002516, assuming we met our assumptions, we can reject the null hypothesis.
+
+**Interpretation of p value**
+
+We can conclude that there is some correlation between average temperature and GDP. Given the observed data, it is unlikely that there is no correlation between average temperature and the GDP for the year 2022.
+
+**Shortcomings, future work, and questions**
+
+The GDP data only covers the year 2022, while the temperature data averages values over a 29-year period. This mismatch might obscure relationships that could exist if yearly data for both variables were compared.
+
+In the future, extend the analysis to include annual GDP values over multiple years and correlate them with corresponding annual average temperatures to observe temporal trends.
+
+Events like wars, economic crises, or pandemics (e.g., Ukraine-Russia war) might have disproportionately affected GDP in certain regions, confounding the analysis.
+In the future we could include categorical variables to account for such events or exclude affected regions from the analysis to minimize their influence.
+
+We aimed to look at how the surface temperature is related to GDP, but we also could have looked at how things like rainfall or natural disasters are connected to the GDP. 
+
+Our data did not meet the assumptions for linear regression, in the future we could either choose different data sets or only looked at specific regions. 
+
+
+# **References**
+
+1. World Bank and OECD. "Country, Regional, and World GDP (Gross Domestic Product)." Datahub.io, Open Data Commons Public Domain Dedication and License v1.0, https://datahub.io/core/gdp/.
+
+2. World Bank. "Climate Change Knowledge Portal." Climate Change Knowledge Portal (2024), Open Data Policy. URL: https://climateknowledgeportal.worldbank.org/. 
